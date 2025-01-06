@@ -1209,6 +1209,7 @@ local function synsaveinstance(CustomOptions)
 	local function savecache()
 		local savestr = table.concat(savebuffer)
 		total ..= savestr
+		print(placename, total)
 		writefile(placename, total)
 		if StatusTextClone then
 			StatusTextClone.Text = "Saving.. Size: " .. getsizeformat()
