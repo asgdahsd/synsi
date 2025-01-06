@@ -35,8 +35,7 @@ local function finder(patterns)
 end
 
 
-finder({
-	-- readbinarystring = 'string.find(...,"bin",nil,true)', -- ! Could match some unwanted stuff
+local patterns = {
 	decompile = '(string.find(...,"decomp",nil,true) and string.sub(...,#...) ~= "s") or string.find(...,"assembl",nil,true)',
 	gethiddenproperty = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) ~= "s"',
 	gethiddenproperties = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) == "s"',
@@ -47,7 +46,8 @@ finder({
 	getspecialinfo = 'string.find(...,"get",nil,true) and string.find(...,"spec",nil,true)',
 	protectgui = 'string.find(...,"protect",nil,true) and string.find(...,"ui",nil,true) and not string.find(...,"un",nil,true)',
 	writefile = 'string.find(...,"file",nil,true) and string.find(...,"write",nil,true)',
-}, true)
+}
+finder(patterns)
 
 local decompile = globalcontainer.decompile
 local gethiddenproperty = globalcontainer.gethiddenproperty
