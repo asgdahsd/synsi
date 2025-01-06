@@ -24,9 +24,8 @@ local function finder(patterns)
         local matchFunc = funcPattern()
         for _, func in ipairs(functions) do
             local result = matchFunc(func)
-            
             if result then
-                container[tostring(name)] = func;
+                container[func] = getgenv()[func]
             end
         end
     end
