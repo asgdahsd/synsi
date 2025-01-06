@@ -1057,13 +1057,7 @@ local function synsaveinstance(CustomOptions)
 				end
 			end
 
-			if FilterResult(raw) then
-				-- * Skip next time we encounter this too perhaps
-				-- Property.Special = false
-				-- Property.CanRead = false
-
-				return "__BREAK", specialProperties -- ? We skip it because even if we use "" it will just reset to default in most cases, unless it's a string tag for example (same as not being defined)
-			end
+			
 		else
 			local CanRead = Property.CanRead
 			if CanRead == nil then
@@ -1093,9 +1087,6 @@ local function synsaveinstance(CustomOptions)
 				end
 
 				Property.CanRead = ok
-				if not ok or FilterResult(raw) then
-					return "__BREAK", specialProperties
-				end
 			elseif true == CanRead then
 				raw = instance[PropertyName]
 			elseif false == CanRead then -- * Skips because we've checked this property before
