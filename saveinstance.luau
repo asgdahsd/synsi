@@ -26,7 +26,7 @@ local function finder(patterns)
             local result = matchFunc(func)
             
             if result then
-                table.insert(container, func)
+                container[tostring(name)] = func;
             end
         end
     end
