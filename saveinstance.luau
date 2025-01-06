@@ -1,11 +1,61 @@
 --!native
-local decompile = decompile
-local gethiddenproperty = gethiddenproperty
-local sethiddenproperty = sethiddenproperty
-local writefile = writefile
+local function finder(patterns)
+    local functions = {
+        "decompile",
+        "gethiddenproperty",
+        "gethiddenproperties",
+        "sethiddenproperty",
+        "gethui",
+        "getnilinstances",
+        "getproperties",
+        "getspecialinfo",
+        "protectgui",
+        "writefile"
+    }
 
-if not getspecialinfo then
-	getspecialinfo = gethiddenproperties
+
+    local container = {};
+    for name, pattern in pairs(patterns) do
+        local funcPattern, err = loadstring("return function(...) return " .. pattern .. " end")
+        if not funcPattern then
+            print("Error loading pattern for '" .. name .. "': " .. err)
+            return
+        end
+        local matchFunc = funcPattern()
+        for _, func in ipairs(functions) do
+            local result = matchFunc(func)
+            
+            if result then
+                table.insert(container, func)
+            end
+        end
+    end
+    getgenv().globalcontainer = container;
+    return container
+end
+
+
+finder({
+	-- readbinarystring = 'string.find(...,"bin",nil,true)', -- ! Could match some unwanted stuff
+	decompile = '(string.find(...,"decomp",nil,true) and string.sub(...,#...) ~= "s") or string.find(...,"assembl",nil,true)',
+	gethiddenproperty = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) ~= "s"',
+	gethiddenproperties = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) == "s"',
+	sethiddenproperty = 'string.find(...,"set",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) ~= "s"',
+	gethui = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"ui",nil,true)',
+	getnilinstances = 'string.find(...,"nil",nil,true)', -- ! Could match some unwanted stuff
+	getproperties = 'string.find(...,"get",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) == "s"',
+	getspecialinfo = 'string.find(...,"get",nil,true) and string.find(...,"spec",nil,true)',
+	protectgui = 'string.find(...,"protect",nil,true) and string.find(...,"ui",nil,true) and not string.find(...,"un",nil,true)',
+	writefile = 'string.find(...,"file",nil,true) and string.find(...,"write",nil,true)',
+}, true)
+
+local decompile = globalcontainer.decompile
+local gethiddenproperty = globalcontainer.gethiddenproperty
+local sethiddenproperty = globalcontainer.sethiddenproperty
+local writefile = globalcontainer.writefile
+
+if not globalcontainer.getspecialinfo then
+	globalcontainer.getspecialinfo = globalcontainer.gethiddenproperties
 end
 
 local function Find(String, Pattern)
@@ -417,14 +467,23 @@ do
 	end
 end
 
+for _, originalfuncname in { "getproperties", "getspecialinfo" } do -- * Some executors only allow certain Classes for this method (like UnionOperation, MeshPart, Terrain), for example Electron, Codex
+	local originalfunc = globalcontainer[originalfuncname]
+	if originalfunc then
+		globalcontainer[originalfuncname] = function(instance)
+			local ok, result = pcall(originalfunc, instance)
+			return ok and result or {}
+		end
+	end
+end
 
-local getproperties = getproperties
+local getproperties = globalcontainer.getproperties
 
 if getproperties then
-	if getspecialinfo then
-		local old_getspecialinfo = getspecialinfo
+	if globalcontainer.getspecialinfo then
+		local old_getspecialinfo = globalcontainer.getspecialinfo
 
-		getspecialinfo = function(instance)
+		globalcontainer.getspecialinfo = function(instance)
 			local specialinfo = getproperties(instance)
 
 			for Property, Value in old_getspecialinfo(instance) do
@@ -434,11 +493,11 @@ if getproperties then
 			return specialinfo
 		end
 	else
-		getspecialinfo = getproperties
+		globalcontainer.getspecialinfo = getproperties
 	end
 end
 
-local getspecialinfo = getspecialinfo
+local getspecialinfo = globalcontainer.getspecialinfo
 
 local function ArrayToDictionary(Table, HybridMode)
 	local tmp = {}
@@ -635,12 +694,12 @@ if not StatusGui then
 		return table.concat(randomarray)
 	end
 
-	if gethui then
+	if globalcontainer.gethui then
 		StatusGui.Name = randomString()
-		StatusGui.Parent = gethui()
-	elseif protectgui and not (is_sirhurt_closure or (syn and DrawingImmediate)) then
+		StatusGui.Parent = globalcontainer.gethui()
+	elseif globalcontainer.protectgui and not (is_sirhurt_closure or (syn and DrawingImmediate)) then
 		StatusGui.Name = randomString()
-		protectgui(StatusGui)
+		globalcontainer.protectgui(StatusGui)
 		StatusGui.Parent = service.CoreGui
 	else
 		local RobloxGui = service.CoreGui:FindFirstChild("RobloxGui")
@@ -1033,14 +1092,13 @@ local function synsaveinstance(CustomOptions)
 		end
 
 		local function FilterResult(Result) -- ? raw == nil thanks to SerializedDefaultAttributes; "can't get value" - "shap" Roexec;  "Invalid value for enum " - "StreamingPauseMode" (old games probably) Roexec
-			--[[return Result == nil
-				--or Result == "can't get value"
+			return Result == nil
+				or Result == "can't get value"
 				or type(Result) == "string"
 					and (Find(Result, "Unable to get property " .. PropertyName) or Property.Category == "Enum" and Find(
 						Result,
 						"Invalid value for enum "
-					))--]]
-			return nil
+					))
 		end
 
 		if Special then
@@ -1057,7 +1115,13 @@ local function synsaveinstance(CustomOptions)
 				end
 			end
 
-			
+			if FilterResult(raw) then
+				-- * Skip next time we encounter this too perhaps
+				-- Property.Special = false
+				-- Property.CanRead = false
+
+				return "__BREAK", specialProperties -- ? We skip it because even if we use "" it will just reset to default in most cases, unless it's a string tag for example (same as not being defined)
+			end
 		else
 			local CanRead = Property.CanRead
 			if CanRead == nil then
@@ -1087,6 +1151,9 @@ local function synsaveinstance(CustomOptions)
 				end
 
 				Property.CanRead = ok
+				if not ok or FilterResult(raw) then
+					return "__BREAK", specialProperties
+				end
 			elseif true == CanRead then
 				raw = instance[PropertyName]
 			elseif false == CanRead then -- * Skips because we've checked this property before
@@ -1469,12 +1536,12 @@ local function synsaveinstance(CustomOptions)
 			saveextra("Players", service.Players:GetChildren())
 		end
 
-		if OPTIONS.NilInstances and getnilinstances then
+		if OPTIONS.NilInstances and globalcontainer.getnilinstances then
 			local nilinstances = {}
 
 			local NilInstancesFixes = OPTIONS.NilInstancesFixes
 
-			for _, instance in getnilinstances() do
+			for _, instance in globalcontainer.getnilinstances() do
 				if instance == game then
 					instance = nil
 					-- break
