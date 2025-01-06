@@ -1033,13 +1033,14 @@ local function synsaveinstance(CustomOptions)
 		end
 
 		local function FilterResult(Result) -- ? raw == nil thanks to SerializedDefaultAttributes; "can't get value" - "shap" Roexec;  "Invalid value for enum " - "StreamingPauseMode" (old games probably) Roexec
-			return Result == nil
+			--[[return Result == nil
 				--or Result == "can't get value"
 				or type(Result) == "string"
 					and (Find(Result, "Unable to get property " .. PropertyName) or Property.Category == "Enum" and Find(
 						Result,
 						"Invalid value for enum "
-					))
+					))--]]
+			return nil
 		end
 
 		if Special then
