@@ -1,31 +1,11 @@
 --!native
-local Params = {
-	RepoURL = "https://raw.githubusercontent.com/luau/SomeHub/main/",
-	UMF = "UniversalMethodFinder",
-}
-local finder, globalcontainer = loadstring(game:HttpGet(Params.RepoURL .. Params.UMF .. ".luau", true), Params.UMF)()
+local decompile = decompile
+local gethiddenproperty = gethiddenproperty
+local sethiddenproperty = sethiddenproperty
+local writefile = writefile
 
-finder({
-	-- readbinarystring = 'string.find(...,"bin",nil,true)', -- ! Could match some unwanted stuff
-	decompile = '(string.find(...,"decomp",nil,true) and string.sub(...,#...) ~= "s") or string.find(...,"assembl",nil,true)',
-	gethiddenproperty = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) ~= "s"',
-	gethiddenproperties = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) == "s"',
-	sethiddenproperty = 'string.find(...,"set",nil,true) and string.find(...,"h",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) ~= "s"',
-	gethui = 'string.find(...,"get",nil,true) and string.find(...,"h",nil,true) and string.find(...,"ui",nil,true)',
-	getnilinstances = 'string.find(...,"nil",nil,true)', -- ! Could match some unwanted stuff
-	getproperties = 'string.find(...,"get",nil,true) and string.find(...,"prop",nil,true) and string.sub(...,#...) == "s"',
-	getspecialinfo = 'string.find(...,"get",nil,true) and string.find(...,"spec",nil,true)',
-	protectgui = 'string.find(...,"protect",nil,true) and string.find(...,"ui",nil,true) and not string.find(...,"un",nil,true)',
-	writefile = 'string.find(...,"file",nil,true) and string.find(...,"write",nil,true)',
-}, true)
-
-local decompile = globalcontainer.decompile
-local gethiddenproperty = globalcontainer.gethiddenproperty
-local sethiddenproperty = globalcontainer.sethiddenproperty
-local writefile = globalcontainer.writefile
-
-if not globalcontainer.getspecialinfo then
-	globalcontainer.getspecialinfo = globalcontainer.gethiddenproperties
+if not getspecialinfo then
+	getspecialinfo = gethiddenproperties
 end
 
 local function Find(String, Pattern)
@@ -437,23 +417,14 @@ do
 	end
 end
 
-for _, originalfuncname in { "getproperties", "getspecialinfo" } do -- * Some executors only allow certain Classes for this method (like UnionOperation, MeshPart, Terrain), for example Electron, Codex
-	local originalfunc = globalcontainer[originalfuncname]
-	if originalfunc then
-		globalcontainer[originalfuncname] = function(instance)
-			local ok, result = pcall(originalfunc, instance)
-			return ok and result or {}
-		end
-	end
-end
 
-local getproperties = globalcontainer.getproperties
+local getproperties = getproperties
 
 if getproperties then
-	if globalcontainer.getspecialinfo then
-		local old_getspecialinfo = globalcontainer.getspecialinfo
+	if getspecialinfo then
+		local old_getspecialinfo = getspecialinfo
 
-		globalcontainer.getspecialinfo = function(instance)
+		getspecialinfo = function(instance)
 			local specialinfo = getproperties(instance)
 
 			for Property, Value in old_getspecialinfo(instance) do
@@ -463,11 +434,11 @@ if getproperties then
 			return specialinfo
 		end
 	else
-		globalcontainer.getspecialinfo = getproperties
+		getspecialinfo = getproperties
 	end
 end
 
-local getspecialinfo = globalcontainer.getspecialinfo
+local getspecialinfo = getspecialinfo
 
 local function ArrayToDictionary(Table, HybridMode)
 	local tmp = {}
@@ -664,12 +635,12 @@ if not StatusGui then
 		return table.concat(randomarray)
 	end
 
-	if globalcontainer.gethui then
+	if gethui then
 		StatusGui.Name = randomString()
-		StatusGui.Parent = globalcontainer.gethui()
-	elseif globalcontainer.protectgui and not (is_sirhurt_closure or (syn and DrawingImmediate)) then
+		StatusGui.Parent = gethui()
+	elseif protectgui and not (is_sirhurt_closure or (syn and DrawingImmediate)) then
 		StatusGui.Name = randomString()
-		globalcontainer.protectgui(StatusGui)
+		protectgui(StatusGui)
 		StatusGui.Parent = service.CoreGui
 	else
 		local RobloxGui = service.CoreGui:FindFirstChild("RobloxGui")
@@ -1506,12 +1477,12 @@ local function synsaveinstance(CustomOptions)
 			saveextra("Players", service.Players:GetChildren())
 		end
 
-		if OPTIONS.NilInstances and globalcontainer.getnilinstances then
+		if OPTIONS.NilInstances and getnilinstances then
 			local nilinstances = {}
 
 			local NilInstancesFixes = OPTIONS.NilInstancesFixes
 
-			for _, instance in globalcontainer.getnilinstances() do
+			for _, instance in getnilinstances() do
 				if instance == game then
 					instance = nil
 					-- break
